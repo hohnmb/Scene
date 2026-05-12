@@ -1,65 +1,64 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEvents } from '@/hooks/useEvents';
+import { useMemo } from 'react';
+import { Loader2 } from 'lucide-react';
+import { HeroBanner } from '@/components/home/HeroBanner';
+import { EventSection } from '@/components/home/EventSection';
+import { GenreShortcuts } from '@/components/home/GenreShortcuts';
+
+export default function HomePage() {
+  const queryParams = useMemo(() => {
+    return {
+      from: '20260501',
+      to: '20260531'
+    };
+  }, []);
+
+  const { data, status } = useEvents({
+    type: 'period',
+    params: queryParams
+  });
+
+  const allEvents = useMemo(() => data ? data.pages.flat() : [], [data]);
+
+  const { heroEvent, recommendedEvents, closingEvents } = useMemo(() => {
+    if (!allEvents.length) return { heroEvent: null, recommendedEvents: [], closingEvents: [] };
+
+    const shuffled = [...allEvents].sort(() => 0.5 - Math.random());
+    
+    // Pick first valid poster event for hero
+    const heroEvent = shuffled.find(e => e.posterUrl) || shuffled[0];
+    
+    // Pick 8 random for recommended
+    const recommendedEvents = shuffled.filter(e => e.id !== heroEvent.id).slice(0, 8);
+    
+    // Sort by end date ascending for closing soon
+    const closingEvents = [...allEvents]
+      .filter(e => e.id !== heroEvent.id)
+      .sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime())
+      .slice(0, 8);
+
+    return { heroEvent, recommendedEvents, closingEvents };
+  }, [allEvents]);
+
+  if (status === 'pending') {
+    return <div className="flex justify-center items-center h-[60vh]"><Loader2 className="w-10 h-10 animate-spin text-[var(--color-brand-primary)]" /></div>;
+  }
+
+  if (status === 'error' || !heroEvent) {
+    return <div className="py-32 text-center text-[var(--color-text-secondary)]">행사 정보를 불러올 수 없습니다.</div>;
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="w-full flex flex-col gap-16 md:gap-24 pb-20">
+      <HeroBanner event={heroEvent} />
+      
+      <div className="max-w-[1440px] mx-auto w-full px-4 md:px-6 flex flex-col gap-16 md:gap-24">
+        <GenreShortcuts />
+        <EventSection title="오늘의 추천 큐레이션" events={recommendedEvents} />
+        <EventSection title="마감 임박! 서두르세요" events={closingEvents} />
+      </div>
     </div>
   );
 }
