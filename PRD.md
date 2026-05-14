@@ -8,7 +8,7 @@
 ### 📌 v1.2 변경사항 (2026-05-12)
 - **API 교체**: 폐기된 "공연전시정보조회서비스" → **"한눈에보는문화정보조회서비스"**로 전환
 - **Base URL 확정**: `https://apis.data.go.kr/B553457/cultureinfo` (HTTPS 지원)
-- **응답 포맷**: JSON 직접 응답 가능 (`returnType=JSON`) → XML 파싱 불필요, `fast-xml-parser` 의존성 제거
+- **응답 포맷**: JSON 직접 응답 가능 (`returnType=JSON`) → XML 파싱 불필요 명시 (단, **실제 구현에서는 API가 XML만 반환하여 `fast-xml-parser`로 파싱 처리**)
 - **일 호출 한도**: 1,000회 → **10,000회** (TanStack Query staleTime 완화 가능)
 - **엔드포인트명 정확화**: `/period2`, `/area2`, `/realm2`, `/detail2`, `/livelihood2` (숫자 2 접미사)
 - **파라미터명 변경**: `cPage`/`rows` → `PageNo`/`numOfrows`, `seq`는 query 파라미터
@@ -139,7 +139,7 @@
   - 좌표 누락 행사 처리: 카카오 로컬 API로 `place` 필드(주소)를 좌표로 변환하여 폴백
   - 사이드 리스트는 지도 영역과 동기화
 
-#### [P2] F-06 관심 행사 찜·저장
+#### [P1 → ✅ 구현완료] F-06 관심 행사 찜·저장
 - **설명**: 사용자가 관심 행사를 저장하고 모아볼 수 있다.
 - **요구사항**:
   - 카드·상세 페이지에 찜 버튼(하트)
@@ -147,14 +147,16 @@
   - Zustand `persist` 미들웨어 사용
   - 찜 목록 페이지 `/saved` — 카드 리스트 + 정렬(찜한 순/시작일순)
   - 찜 개수 헤더에 표시
+- **비고**: 당초 P2로 분류했으나 MVP 범위 내에 구현 완료.
 
-#### [P3] F-07 오늘의 추천 (홈 큐레이션)
+#### [P2 → ✅ 구현완료] F-07 오늘의 추천 (홈 큐레이션)
 - **설명**: 홈 화면에서 "오늘의 추천", "이번 주 하이라이트" 큐레이션 섹션 제공.
 - **요구사항**:
-  - 오늘의 추천: 오늘 진행 중인 행사 중 무작위 3개 (또는 인기도 기준)
-  - 이번 주 하이라이트: 이번 주 시작 행사 중 5개
-  - 가로 스크롤 캐러셀
-- **참고**: 시간 여유 시에만 구현
+  - 히어로 배너 (대표 공연 강조 노출)
+  - 추천 공연 8개 카드 그리드
+  - 마감 임박 공연 8개 카드 그리드
+  - 장르 바로가기 숏컷
+- **비고**: 당초 P3로 분류했으나 MVP 범위 내에 구현 완료. 캐러셀 대신 카드 그리드 방식으로 구현.
 
 ---
 
@@ -185,7 +187,7 @@
 ### 5.1 프론트엔드
 | 영역 | 선택 | 비고 |
 |---|---|---|
-| 프레임워크 | Next.js 15 (App Router) | 커리큘럼 메인. **API Route 프록시 권장** (키 보호 목적) |
+| 프레임워크 | Next.js 16.2.6 (App Router) | 커리큘럼 메인. **API Route 프록시 권장** (키 보호 목적) |
 | 언어 | TypeScript | strict 모드 |
 | 스타일 | Tailwind CSS | utility-first |
 | UI 컴포넌트 | shadcn/ui | 디자인 시스템 |
@@ -197,7 +199,7 @@
 | 아이콘 | lucide-react | - |
 | 날짜 처리 | date-fns | YYYYMMDD ↔ ISO 변환 |
 
-> ❌ ~~fast-xml-parser~~ — API가 `returnType=JSON` 옵션 지원하므로 XML 파서 불필요. JSON 직접 받음.
+> ⚠️ ~~fast-xml-parser 제거 예정~~ → **실제 구현에서 API가 XML만 반환하여 `fast-xml-parser` 유지 중.** `returnType=JSON`이 명세상 지원이나 실제 응답은 XML이므로 파서 의존성은 현재 필수.
 
 ### 5.2 데이터·API
 
@@ -279,7 +281,7 @@ app/api/events/
   realm/route.ts       → /realm2 프록시
   bounds/route.ts      → /period2 + gps 영역 파라미터 조합 프록시
   [id]/route.ts        → /detail2 프록시
-  calendar/route.ts    → /livelihood2 프록시 (F-04 활용 검토용)
+  calendar/route.ts    → /livelihood2 프록시 (미구현 — 캘린더 뷰는 /period2 결과 가공으로 대체)
 app/api/geocode/
   route.ts             → 카카오 주소→좌표 변환 프록시
 ```
